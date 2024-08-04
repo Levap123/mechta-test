@@ -7,24 +7,31 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
-
 type Data struct {
 	A int `json:"a"`
 	B int `json:"b"`
 }
 
-func readData(path string) ([]Data, error) {
-	bytes, err := os.ReadFile(path)
+func readData(path string, chanBuffer int) (<-chan Data, error) {
+	dataCh := make(chan Data, chanBuffer)
+
+	file, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("os.ReadFile: %w", err)
+		return nil, fmt.Errorf("can not open file: %v", err)
 	}
 
-	var data []Data
+	go func() {
+		defer close(dataCh)
+		defer file.Close()
 
-	if err := json.Unmarshal(bytes, &data); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %w", err)
-	}
+		iter := jsoniter.Parse(jsoniter.ConfigDefault, file, 1024)
 
-	return data, nil
+		for iter.ReadArray() {
+			var data Data
+			iter.ReadVal(&data)
+			dataCh <- data
+		}
+	}()
+
+	return dataCh, nil
 }

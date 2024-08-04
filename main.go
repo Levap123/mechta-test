@@ -20,26 +20,18 @@ func main() {
 		log.Fatalf("provide valid workers number: %v", err)
 	}
 
-	data, err := readData(filename)
+	results := make(chan int, workersNum)
+
+	dataCh, err := readData(filename, workersNum)
 	if err != nil {
 		log.Fatalf("read data: %v", err)
 	}
 
-	dataChan := make(chan Data, workersNum)
-	results := make(chan int, workersNum)
-
 	var wg sync.WaitGroup
 	for i := 0; i < workersNum; i++ {
 		wg.Add(1)
-		go worker(dataChan, results, &wg)
+		go worker(dataCh, results, &wg)
 	}
-
-	go func() {
-		for _, d := range data {
-			dataChan <- d
-		}
-		close(dataChan)
-	}()
 
 	go func() {
 		wg.Wait()
