@@ -25,7 +25,7 @@ func main() {
 		log.Fatalf("read data: %v", err)
 	}
 
-	dataChan := make(chan Data, len(data))
+	dataChan := make(chan Data, workersNum)
 	results := make(chan int, workersNum)
 
 	var wg sync.WaitGroup
